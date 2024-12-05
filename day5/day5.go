@@ -10,30 +10,28 @@ import (
 )
 
 func Day5() {
-	file, _ := os.Open("input/test/5.txt")
+	file, _ := os.Open("input/5.txt")
 	defer file.Close()
 
-	ruleMap := map[int][]int{}
+	ruleMap := map[string][]string{}
 	inRules := true
 	badMidTotal := 0
-	// badMids := []int{}
+	badMids := []string{}
 
 	parseRule := func(line string) {
 		before, after, _ := strings.Cut(line, "|")
-		b, _ := strconv.Atoi(before)
-		a, _ := strconv.Atoi(after)
-		ruleMap[b] = append(ruleMap[b], a)
+		ruleMap[before] = append(ruleMap[before], after)
 	}
 
 	parseUpdate := func(vals []string) {
-		seen := []int{}
-		beforeIdx := -1
+		seen := []string{}
+		badUpdate := false
 
 		for _, val := range vals {
-			n, _ := strconv.Atoi(val)
-			if ruleMap[n] != nil {
+			beforeIdx := -1
+			if ruleMap[val] != nil {
 				for i, prev := range seen {
-					if slices.Contains(ruleMap[n], prev) {
+					if slices.Contains(ruleMap[val], prev) {
 						beforeIdx = i
 						break
 					}
@@ -42,31 +40,23 @@ func Day5() {
 
 			// Part 2
 			if beforeIdx > -1 {
-				seen = slices.Insert(seen, beforeIdx, n)
+				seen = slices.Insert(seen, beforeIdx, val)
+				badUpdate = true
 			} else {
-				seen = append(seen, n)
+				seen = append(seen, val)
 			}
 
 			// Part 1
-			// seen = append(seen, n)
-		}
-
-		// Part 2
-		if beforeIdx > -1 {
-			badMidTotal += seen[len(seen)/2]
+			// seen = append(seen, val)
 		}
 
 		// Part 1
-		// if badUpdate == -1 {
-		// 	midIdx := len(vals) / 2
-		// 	var midVal int
-		// 	if midIdx < len(seen) {
-		// 		midVal = seen[midIdx]
-		// 	} else {
-		// 		midVal, _ = strconv.Atoi(vals[midIdx])
-		// 	}
-		// 	badMidTotal += midVal
-		// }
+		// if !badUpdate {
+
+		// Part 2
+		if badUpdate {
+			badMids = append(badMids, seen[len(seen)/2])
+		}
 	}
 
 	scanner := bufio.NewScanner(file)
@@ -85,6 +75,10 @@ func Day5() {
 		}
 	}
 
+	for _, midVal := range badMids {
+		n, _ := strconv.Atoi(midVal)
+		badMidTotal += n
+	}
+
 	fmt.Println("Total: ", badMidTotal)
-	// fmt.Println("Mid vals: ", badMids)
 }
