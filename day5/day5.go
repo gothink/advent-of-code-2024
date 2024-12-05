@@ -9,14 +9,23 @@ import (
 	"strings"
 )
 
+func total(strs []string) (acc int) {
+	for _, midVal := range strs {
+		n, _ := strconv.Atoi(midVal)
+		acc += n
+	}
+
+	return
+}
+
 func Day5() {
 	file, _ := os.Open("input/5.txt")
 	defer file.Close()
 
 	ruleMap := map[string][]string{}
 	inRules := true
-	badMidTotal := 0
 	badMids := []string{}
+	goodMids := []string{}
 
 	parseRule := func(line string) {
 		before, after, _ := strings.Cut(line, "|")
@@ -33,29 +42,23 @@ func Day5() {
 				for i, prev := range seen {
 					if slices.Contains(ruleMap[val], prev) {
 						beforeIdx = i
+						badUpdate = true
 						break
 					}
 				}
 			}
 
-			// Part 2
 			if beforeIdx > -1 {
 				seen = slices.Insert(seen, beforeIdx, val)
-				badUpdate = true
 			} else {
 				seen = append(seen, val)
 			}
-
-			// Part 1
-			// seen = append(seen, val)
 		}
 
-		// Part 1
-		// if !badUpdate {
-
-		// Part 2
 		if badUpdate {
 			badMids = append(badMids, seen[len(seen)/2])
+		} else {
+			goodMids = append(goodMids, seen[len(seen)/2])
 		}
 	}
 
@@ -75,10 +78,9 @@ func Day5() {
 		}
 	}
 
-	for _, midVal := range badMids {
-		n, _ := strconv.Atoi(midVal)
-		badMidTotal += n
-	}
+	badMidTotal := total(badMids)
+	goodMidTotal := total(goodMids)
 
-	fmt.Println("Total: ", badMidTotal)
+	fmt.Println("Part 1 total: ", goodMidTotal)
+	fmt.Println("Part 2 total: ", badMidTotal)
 }
