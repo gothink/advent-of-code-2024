@@ -7,10 +7,20 @@ import (
 	"strings"
 )
 
-type GuardMap [][]string
+// GridMap stores state and vector bitmask of each cell with
+// the following flags:
+//
+// 0 -> unvisited
+// 1 -> obstacle
+// 2..5 -> visited, vec: u=2,r=3,d=4,l=5
+//
+//	N.B.: visited bits are stored in same order as `vecMarkers` and `unitVecs`
+type GridMap []int
 
 type MapPuzzle struct {
-	grid     GuardMap
+	gm       GridMap
+	height   int
+	width    int
 	vector   int
 	position [2]int
 }
@@ -18,26 +28,26 @@ type MapPuzzle struct {
 var vecMarkers string = "^>v<"
 var unitVecs = [4][2]int{{0, -1}, {1, 0}, {0, 1}, {-1, 0}}
 
-func solve(mp *MapPuzzle) (visited [][2]int, loop bool) {
+func solve(mp *MapPuzzle, g *GridMap, first bool) (visited [][2]int, loop bool) {
 	pos, vec := mp.position, mp.vector
-	g := make(GuardMap, len(mp.grid))
-	for i := range mp.grid {
-		g[i] = make([]string, len(mp.grid[i]))
-		copy(g[i], mp.grid[i])
-	}
+	gm := *g
 
 	for {
-		if pos[0] > len(g[0])-1 || pos[0] < 0 || pos[1] > len(g)-1 || pos[1] < 0 {
+		if pos[0] >= mp.width || pos[0] < 0 || pos[1] >= mp.height || pos[1] < 0 {
 			// out of bounds
 			break
 		}
 
-		if g[pos[1]][pos[0]] == "." {
-			visited = append(visited, pos)
-			// add vector marker to cell
-			g[pos[1]][pos[0]] = vecMarkers[vec : vec+1]
-		} else if g[pos[1]][pos[0]] == "#" {
-			// go back one cell
+		idx := (pos[1] * mp.width) + pos[0]
+
+		if gm[idx] == 0 {
+			if first {
+				visited = append(visited, pos)
+			}
+			// unvisited, assign vector bitmask
+			gm[idx] = 2 << vec
+		} else if gm[idx] == 1 {
+			// obstacle, go back one cell
 			pos[0] -= unitVecs[vec][0]
 			pos[1] -= unitVecs[vec][1]
 
@@ -46,13 +56,13 @@ func solve(mp *MapPuzzle) (visited [][2]int, loop bool) {
 			if vec >= len(unitVecs) {
 				vec = 0
 			}
-		} else if strings.Contains(g[pos[1]][pos[0]], vecMarkers[vec:vec+1]) {
-			// returning on a previous path, in a loop
+		} else if gm[idx]&(2<<vec) > 0 {
+			// visited cell on same vector, in a loop
 			loop = true
 			break
 		} else {
-			// append vector marker to cell
-			g[pos[1]][pos[0]] += vecMarkers[vec : vec+1]
+			// visited cell, add vector bitmask
+			gm[idx] += 2 << vec
 		}
 
 		// advance one cell
@@ -72,42 +82,50 @@ func newMap(fp string) *MapPuzzle {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		line := []string{}
 		for j, r := range scanner.Text() {
-			if idx := strings.IndexRune(vecMarkers, r); idx > -1 {
+			if r == '.' {
+				mp.gm = append(mp.gm, 0)
+			} else if r == '#' {
+				mp.gm = append(mp.gm, 1)
+			} else if idx := strings.IndexRune(vecMarkers, r); idx > -1 {
+				mp.gm = append(mp.gm, 2<<idx)
 				mp.vector = idx
-				mp.position[0] = j
-				mp.position[1] = i
-				r = '.'
+				mp.position[0] = j + unitVecs[idx][0]
+				mp.position[1] = i + unitVecs[idx][1]
 			}
-
-			line = append(line, string(r))
 		}
 
-		mp.grid = append(mp.grid, line)
 		i++
 	}
+
+	mp.height = i
+	mp.width = len(mp.gm) / i
 
 	return mp
 }
 
 func Day6() {
 	mp := newMap("input/6.txt")
-	visited, loop := solve(mp)
+	gm := make(GridMap, len(mp.gm))
+	copy(gm, mp.gm)
+
+	visited, loop := solve(mp, &gm, true)
 	if loop {
-		fmt.Println("Guard is stuck in a loop!")
+		fmt.Println("Guard is already stuck in a loop!")
+		os.Exit(1)
 	} else {
-		fmt.Println("Visited: ", len(visited))
+		fmt.Println("Part 1, cells visited: ", len(visited)+1) // skips first square, add 1 to result
 	}
 
 	numLoops := 0
 	for _, coords := range visited {
-		mp.grid[coords[1]][coords[0]] = "#"
-		if _, loop := solve(mp); loop {
+		idx := (coords[1] * mp.width) + coords[0]
+		gm[idx] = 1
+		if _, loop := solve(mp, &gm, false); loop {
 			numLoops++
 		}
-		mp.grid[coords[1]][coords[0]] = "."
+		copy(gm, mp.gm)
 	}
 
-	fmt.Println("Possible loops: ", numLoops)
+	fmt.Println("Part 2, possible loops: ", numLoops)
 }
