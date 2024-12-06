@@ -5,97 +5,109 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	// "slices"
 )
 
 type GuardMap [][]string
 
 type MapPuzzle struct {
-	Grid     GuardMap
-	Height   int
-	Width    int
-	Vector   int
-	Position [2]int
-	Visited  int
+	grid     GuardMap
+	vector   int
+	position [2]int
 }
 
-var startMarkers string = "^>v<"
-
+var vecMarkers string = "^>v<"
 var unitVecs = [4][2]int{{0, -1}, {1, 0}, {0, 1}, {-1, 0}}
 
-func (mp *MapPuzzle) OutOfBounds() bool {
-	if mp.Position[0] > mp.Width-1 || mp.Position[0] < 0 || mp.Position[1] > mp.Height-1 || mp.Position[1] < 0 {
-		return true
-	} else {
-		return false
+func solve(mp *MapPuzzle) (visited [][2]int, loop bool) {
+	pos, vec := mp.position, mp.vector
+	g := make(GuardMap, len(mp.grid))
+	for i := range mp.grid {
+		g[i] = make([]string, len(mp.grid[i]))
+		copy(g[i], mp.grid[i])
 	}
-}
 
-func (mp *MapPuzzle) SolveMap() {
 	for {
-		if out := mp.OutOfBounds(); out {
+		if pos[0] > len(g[0])-1 || pos[0] < 0 || pos[1] > len(g)-1 || pos[1] < 0 {
+			// out of bounds
 			break
 		}
-		if mp.Grid[mp.Position[1]][mp.Position[0]] == "." {
-			mp.Visited++
-			mp.Grid[mp.Position[1]][mp.Position[0]] = "-"
-		} else if mp.Grid[mp.Position[1]][mp.Position[0]] == "#" {
+
+		if g[pos[1]][pos[0]] == "." {
+			visited = append(visited, pos)
+			// add vector marker to cell
+			g[pos[1]][pos[0]] = vecMarkers[vec : vec+1]
+		} else if g[pos[1]][pos[0]] == "#" {
 			// go back one cell
-			mp.Position[0] -= unitVecs[mp.Vector][0]
-			mp.Position[1] -= unitVecs[mp.Vector][1]
+			pos[0] -= unitVecs[vec][0]
+			pos[1] -= unitVecs[vec][1]
 
 			// update unit vector
-			mp.Vector++
-			if mp.Vector >= len(unitVecs) {
-				mp.Vector = 0
+			vec++
+			if vec >= len(unitVecs) {
+				vec = 0
 			}
+		} else if strings.Contains(g[pos[1]][pos[0]], vecMarkers[vec:vec+1]) {
+			// returning on a previous path, in a loop
+			loop = true
+			break
+		} else {
+			// append vector marker to cell
+			g[pos[1]][pos[0]] += vecMarkers[vec : vec+1]
 		}
 
 		// advance one cell
-		mp.Position[0] += unitVecs[mp.Vector][0]
-		mp.Position[1] += unitVecs[mp.Vector][1]
+		pos[0] += unitVecs[vec][0]
+		pos[1] += unitVecs[vec][1]
 	}
+
+	return
 }
 
-func NewMap(fp string) *MapPuzzle {
+func newMap(fp string) *MapPuzzle {
 	file, _ := os.Open(fp)
 	defer file.Close()
 
 	mp := new(MapPuzzle)
-	// mp.Grid = [][]string{}
 	i := 0
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := []string{}
 		for j, r := range scanner.Text() {
-			if idx := strings.IndexRune(startMarkers, r); idx > -1 {
-				mp.Vector = idx
-				mp.Position[0] = j
-				mp.Position[1] = i
-				r = '-'
-				mp.Visited++
+			if idx := strings.IndexRune(vecMarkers, r); idx > -1 {
+				mp.vector = idx
+				mp.position[0] = j
+				mp.position[1] = i
+				r = '.'
 			}
 
 			line = append(line, string(r))
 		}
 
-		mp.Grid = append(mp.Grid, line)
+		mp.grid = append(mp.grid, line)
 		i++
 	}
-
-	mp.Height = len(mp.Grid)
-	mp.Width = len(mp.Grid[0])
 
 	return mp
 }
 
 func Day6() {
-	mp := NewMap("input/6.txt")
-	mp.SolveMap()
-	// fmt.Println(mp.Grid)
-	for _, row := range mp.Grid {
-		fmt.Println(row)
+	mp := newMap("input/6.txt")
+	visited, loop := solve(mp)
+	if loop {
+		fmt.Println("Guard is stuck in a loop!")
+	} else {
+		fmt.Println("Visited: ", len(visited))
 	}
-	fmt.Println("Visited: ", mp.Visited)
+
+	numLoops := 0
+	for _, coords := range visited {
+		mp.grid[coords[1]][coords[0]] = "#"
+		if _, loop := solve(mp); loop {
+			numLoops++
+		}
+		mp.grid[coords[1]][coords[0]] = "."
+	}
+
+	fmt.Println("Possible loops: ", numLoops)
 }
