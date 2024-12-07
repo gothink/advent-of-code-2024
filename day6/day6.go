@@ -17,6 +17,7 @@ import (
 //	N.B.: visited bits are stored in same order as `vecMarkers` and `unitVecs`
 type GridMap []int
 
+// Stores initial GridMap and starting position/vector for re-parsing.
 type MapPuzzle struct {
 	gm       GridMap
 	height   int
