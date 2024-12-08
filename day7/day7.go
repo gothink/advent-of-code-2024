@@ -96,11 +96,6 @@ func Day7() {
 	var wg sync.WaitGroup
 	results := make(chan uint64)
 
-	go func() {
-		wg.Wait()
-		close(results)
-	}()
-
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		goal, nums := parseLine(scanner.Text())
@@ -116,6 +111,11 @@ func Day7() {
 			results <- result
 		}()
 	}
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
 
 	var total uint64 = 0
 	for c := range results {
