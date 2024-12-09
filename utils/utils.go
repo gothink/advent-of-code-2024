@@ -7,6 +7,8 @@ import (
 	"os"
 )
 
+// Open file at path `fp` and send each line to channel `ch`.
+// Returns an error if opening or scanning fails.
 func Scan(fp string, ch chan string) error {
 	defer close(ch)
 
@@ -28,6 +30,10 @@ func Scan(fp string, ch chan string) error {
 	return nil
 }
 
+// Returns the filepath of the input file for a given day.
+// Fetches the input file from adventofcode.com if file doesn't exist.
+//
+// Session cookie must be stored in environment variable AOC24_SESSION
 func Fetch(day string) (string, error) {
 	fp := "input/" + day + ".txt"
 	if _, err := os.Stat(fp); err == nil {
