@@ -80,7 +80,6 @@ func solvePart2() {
 				freeSizes[j] -= fileSizes[i]
 				calcChecksum2(i, fileSizes[i], blockOffsets[j])
 				blockOffsets[j] += fileSizes[i]
-				blockOffsets[i] -= fileSizes[i]
 				hasMoved = true
 				break
 			}
