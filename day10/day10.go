@@ -3,7 +3,7 @@ package day10
 import (
 	"aoc24/utils"
 	"fmt"
-	// "slices"
+	"slices"
 )
 
 type coords [2]int
@@ -13,11 +13,12 @@ var rows = 0
 var cols = 0
 var trailheads = []coords{}
 
-// var trailends = map[coords][]coords{}
+var trailends = map[coords][]coords{}
 
 // up, down, left, right
 var unitVecs = [4]coords{{0, -1}, {0, 1}, {-1, 0}, {1, 0}}
-var total = 0
+var part1Total = 0
+var part2Total = 0
 
 func parseLine(line string, y int) {
 	ints := make([]int, len(line))
@@ -43,15 +44,18 @@ func (c1 *coords) move(dir int) (c2 coords, oob bool) {
 
 func findNext(coord coords, from int, orig coords) {
 	if grid[coord[1]][coord[0]] == 9 {
-		// trailstarts, ok := trailends[coord]
-		// if !ok {
-		// 	trailends[coord] = []coords{orig}
-		// }
-		// if slices.Contains(trailstarts, orig) {
-		// 	return
-		// }
-		// trailends[coord] = append(trailends[coord], orig)
-		total++
+		part2Total++
+
+		trailstarts, ok := trailends[coord]
+		if !ok {
+			trailends[coord] = []coords{orig}
+		}
+		if slices.Contains(trailstarts, orig) {
+			return
+		}
+		trailends[coord] = append(trailends[coord], orig)
+
+		part1Total++
 		return
 	}
 
@@ -83,15 +87,12 @@ func Day10() {
 		rows++
 	}
 
-	fmt.Println(grid)
-	fmt.Println(trailheads)
-
 	cols = len(grid[0])
-	fmt.Println(rows, cols)
 
 	for _, th := range trailheads {
 		findNext(th, -1, th)
 	}
 
-	fmt.Println(total)
+	fmt.Println("Part 1 total:", part1Total)
+	fmt.Println("Part 2 total:", part2Total)
 }
