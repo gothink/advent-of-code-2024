@@ -3,7 +3,6 @@ package day20
 import (
 	"aoc24/utils"
 	"fmt"
-	"slices"
 	"strings"
 )
 
@@ -57,14 +56,14 @@ func parseLine(line string, rows int) {
 		}
 		if s == "S" {
 			startCoords = coords{col, rows}
-			grid[coords{col, rows}] = cell{val: "."}
+			s = "."
 
 		} else if s == "E" {
 			endCoords = coords{col, rows}
-			grid[coords{col, rows}] = cell{val: "."}
-		} else {
-			grid[coords{col, rows}] = cell{val: s}
+			s = "."
 		}
+
+		grid[coords{col, rows}] = cell{val: s}
 	}
 }
 
@@ -74,9 +73,7 @@ func isShortcut(loc coords, dir int) bool {
 	if shortcut, ok := grid.at(toCoords); ok {
 		if !shortcut.seen && shortcut.val == "." {
 			if len(shortcut.shortcuts) > 0 {
-				if !slices.Contains(shortcut.shortcuts, fromCoords) {
-					shortcut.shortcuts = append(shortcut.shortcuts, fromCoords)
-				}
+				shortcut.shortcuts = append(shortcut.shortcuts, fromCoords)
 			} else {
 				shortcut.shortcuts = []coords{fromCoords}
 			}
@@ -94,49 +91,37 @@ func checkCell(loc coords, dir int) (nextCoords coords, nextDir int) {
 	}
 
 	cell.seen = true
+	cell.order = pathCount
+	pathCount++
 
-	if cell.val == "#" {
-		isShortcut(loc, dir)
-		// go back 1 cell, check in opposite dir
-		prevLoc := loc.move(dir, -1)
-		nextDir = (dir & 2) ^ 2
-		nextCoords = prevLoc.move(nextDir, 1)
-		if nextCell, ok := grid.at(nextCoords); ok {
-			if nextCell.val == "#" {
-				isShortcut(nextCoords, nextDir)
-				// another dead end, turn around
-				nextDir ^= 1
-				nextCoords = prevLoc.move(nextDir, 1)
-			} else {
-				isShortcut(prevLoc.move(nextDir, -1), nextDir^1)
+	// process shortcuts to this cell
+	if len(cell.shortcuts) > 0 {
+		for _, shortCoords := range cell.shortcuts {
+			shortcut, ok := grid.at(shortCoords)
+			if !ok {
+				continue
+			}
+			if cell.order-shortcut.order-2 >= 100 {
+				shortcutCount++
 			}
 		}
-	} else {
-		cell.order = pathCount
-		pathCount++
-		if len(cell.shortcuts) > 0 {
-			for _, shortCoords := range cell.shortcuts {
-				shortcut, ok := grid.at(shortCoords)
-				if !ok {
-					continue
-				}
-				if cell.order-shortcut.order-2 >= 100 {
-					// valid shortcut
-					shortcutCount++
-				}
-			}
-		}
+	}
 
-		oppDir := (dir & 2) ^ 2
-		for i := oppDir; i < oppDir+2; i++ {
-			checkLoc := loc.move(i, 1)
-			if grid[checkLoc].val == "#" {
-				isShortcut(checkLoc, i)
-			}
-		}
+	// advance one cell
+	nextDir = dir
+	nextCoords = loc.move(dir, 1)
 
-		nextDir = dir
-		nextCoords = loc.move(dir, 1)
+	// check adjacent cells
+	oppDir := (dir & 2) ^ 2
+	for i := oppDir; i < oppDir+2; i++ {
+		checkLoc := loc.move(i, 1)
+		if grid[checkLoc].val == "#" {
+			isShortcut(checkLoc, i)
+		} else {
+			isShortcut(loc.move(dir, 1), dir)
+			nextDir = i
+			nextCoords = loc.move(i, 1)
+		}
 	}
 
 	grid[loc] = cell
@@ -164,7 +149,6 @@ func Day20() {
 		fmt.Println(err)
 		return
 	}
-	// fp := "input/test/20.txt"
 
 	lines := make(chan string)
 	go utils.Scan(fp, lines)
